@@ -59,7 +59,7 @@ def simulating_population(ember_data, num_gens):
 
 
 # function to plot the simulations results over generations
-def plot_simulaiton(simulation):
+def plot_one_simulaiton(simulation):
     counts = simulation.groupby(['generation', 'eye color']).size().unstack(fill_value=0)
     counts.plot(kind='line', color=['blue', 'brown'])
     plt.title('eye color distribution across generations')
@@ -70,26 +70,35 @@ def plot_simulaiton(simulation):
     plt.show()
 
 
-# simulation = simulating_population(ember_data,100)
-# simulation.to_excel('szemek.xlsx')
-# plot_simulaiton(simulation)
+# plot_one_simulaiton(simulation)
 
 
 # function to compare results over a number of futures
 def monte_carlo(ember_data, num_futures):
     distr = []
-    for _ in tqdm(range(num_futures), desc="simulating futures..."):
+    for n in tqdm(range(num_futures), desc="simulating futures..."):
         rand_sim = simulating_population(ember_data,10)
         rand_sim = rand_sim.groupby(['generation', 'eye color']).size().unstack(fill_value=0)
-        rand_sim['blue to brown'] = rand_sim['blue']/rand_sim['brown']
-        distr.append(rand_sim['blue to brown'])
+        rand_sim['run_' + str(n)] = rand_sim['blue']/rand_sim['brown']
+        distr.append(rand_sim['run_' + str(n)])
 
     distr_df = pd.DataFrame(distr).T
     return distr_df
 
 
-simulation = monte_carlo(ember_data,10)
-simulation.to_excel('monte_carlo.xlsx')
+mt_simulation = monte_carlo(ember_data,10)
+mt_simulation.to_excel('eye_color_simulation/monte_carlo.xlsx')
+
+# function to plot all the runs (only works with small number of runs, becomes unreadable) 
+def plot_blue_to_brown_mt(distr_df):
+    distr_df.iloc[:, 1:].plot(legend=False)
+    plt.xlabel("generations")
+    plt.ylabel("blue to brown ratio in generation")
+    plt.show()
+
+plot_blue_to_brown_mt(mt_simulation)
+
+
 
 
 
