@@ -1,12 +1,11 @@
-import time
 import random
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-eye_colors = ('brown', 'blue')
-allels = ('B', 'b')
+eye_colors = ('brown', 'blue' ,'green')
+allels = ('B', 'b', 'G')
 
 # creating a person class with the needed attributes
 class Person:
@@ -21,7 +20,7 @@ emberek = []
 # creating the first generation
 for number in range(1000):
     allel = ''.join(random.choices(allels, k=2))
-    eye_color = 'brown' if 'B' in allel else 'blue'
+    eye_color = 'brown' if 'B' in allel else ('green' if 'G' in allel else 'blue')
     person = Person(allel, generation=1, eye_color=eye_color)
     emberek.append(person)
 
@@ -31,8 +30,10 @@ ember_data = pd.DataFrame([{'allel': person.allel, 'eye color': person.eye_color
 # function for random sampling parents and creating children
 def reproduce(parent1, parent2):
     child_allel = random.choice(parent1.allel) + random.choice(parent2.allel)
-    if child_allel == 'Bb' or child_allel == 'BB' or child_allel == 'bB':
+    if 'B' in child_allel:
         return child_allel, 'brown'
+    elif 'G' in child_allel:
+        return child_allel, 'green'
     else:
         return child_allel, 'blue'
 
@@ -61,7 +62,7 @@ def simulating_population(ember_data, num_gens):
 # function to plot the simulations results over generations
 def plot_one_simulaiton(simulation):
     counts = simulation.groupby(['generation', 'eye color']).size().unstack(fill_value=0)
-    counts.plot(kind='line', color=['blue', 'brown'])
+    counts.plot(kind='line', color=['blue', 'brown', 'green'])
     plt.title('eye color distribution across generations')
     plt.xlabel('generation')
     plt.ylabel('number of people')
@@ -69,7 +70,7 @@ def plot_one_simulaiton(simulation):
     plt.grid()
     plt.show()
 
-
+# simulation = simulating_population(ember_data, 10)
 # plot_one_simulaiton(simulation)
 
 
@@ -77,26 +78,41 @@ def plot_one_simulaiton(simulation):
 def monte_carlo(ember_data, num_futures):
     distr = []
     for n in tqdm(range(num_futures), desc="simulating futures..."):
-        rand_sim = simulating_population(ember_data,10)
+        rand_sim = simulating_population(ember_data, 100)
         rand_sim = rand_sim.groupby(['generation', 'eye color']).size().unstack(fill_value=0)
-        rand_sim['run_' + str(n)] = rand_sim['blue']/rand_sim['brown']
-        distr.append(rand_sim['run_' + str(n)])
 
-    distr_df = pd.DataFrame(distr).T
+        # proportions of each color
+        total = rand_sim.sum(axis=1)
+        rand_sim['p_blue'] = rand_sim['blue'] / total
+        rand_sim['p_green'] = rand_sim['green'] / total
+        rand_sim['p_brown'] = rand_sim['brown'] / total
+
+        # store proportions for this run
+        rand_sim['run'] = n
+        distr.append(rand_sim[['p_blue','p_green','p_brown','run']])
+
+    distr_df = pd.concat(distr)
     return distr_df
 
 
 mt_simulation = monte_carlo(ember_data,10)
-mt_simulation.to_excel('eye_color_simulation/monte_carlo.xlsx')
+mt_simulation.to_excel('monte_carlo.xlsx')
 
 # function to plot all the runs (only works with small number of runs, becomes unreadable) 
-def plot_blue_to_brown_mt(distr_df):
-    distr_df.iloc[:, 1:].plot(legend=False)
-    plt.xlabel("generations")
-    plt.ylabel("blue to brown ratio in generation")
+def plot_eye_color_proportions_all_runs(distr_df):
+    colors = {"p_blue": "blue", "p_green": "green", "p_brown": "brown"}
+
+    for run, df_run in distr_df.groupby("run"):
+        for col, c in colors.items():
+            plt.plot(df_run.index, df_run[col], color=c, alpha=0.6)
+
+    plt.xlabel("generation")
+    plt.ylabel("proportion of population")
+    plt.title("Eye color proportions across runs")
     plt.show()
 
-plot_blue_to_brown_mt(mt_simulation)
+
+plot_eye_color_proportions_all_runs(mt_simulation)
 
 
 
