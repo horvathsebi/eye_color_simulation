@@ -4,8 +4,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-eye_colors = ('brown', 'blue' ,'green')
-allels = ('B', 'b', 'G')
 
 # creating a person class with the needed attributes
 class Person:
@@ -14,33 +12,40 @@ class Person:
         self.generation = generation
         self.eye_color = eye_color
 
-emberek = []
+
+def simulating_first_population(people_in_gen=1000):
+
+    eye_colors = ('brown', 'blue' ,'green')
+    allels = ('B', 'b', 'G')
+
+    emberek = []
+
+    # creating the first generation
+    for number in range(people_in_gen):
+        allel = ''.join(random.choices(allels, k=2))
+        eye_color = 'brown' if 'B' in allel else ('green' if 'G' in allel else 'blue')
+        person = Person(allel, generation=1, eye_color=eye_color)
+        emberek.append(person)
+
+    ember_data = pd.DataFrame([{'allel': person.allel, 'eye color': person.eye_color, 'generation': person.generation} for person in emberek])
+   
+    return ember_data
 
 
-# creating the first generation
-for number in range(1000):
-    allel = ''.join(random.choices(allels, k=2))
-    eye_color = 'brown' if 'B' in allel else ('green' if 'G' in allel else 'blue')
-    person = Person(allel, generation=1, eye_color=eye_color)
-    emberek.append(person)
-
-ember_data = pd.DataFrame([{'allel': person.allel, 'eye color': person.eye_color, 'generation': person.generation} for person in emberek])
-
+    # simulating random population growth for the generation
+def simulating_generations(ember_data, num_gens=10):
 
 # function for random sampling parents and creating children
-def reproduce(parent1, parent2):
-    child_allel = random.choice(parent1.allel) + random.choice(parent2.allel)
-    if 'B' in child_allel:
-        return child_allel, 'brown'
-    elif 'G' in child_allel:
-        return child_allel, 'green'
-    else:
-        return child_allel, 'blue'
-
-
-# function for simulating random population growth for the generation
-def simulating_population(ember_data, num_gens):
+    def reproduce(parent1, parent2):
+        child_allel = random.choice(parent1.allel) + random.choice(parent2.allel)
+        if 'B' in child_allel:
+            return child_allel, 'brown'
+        elif 'G' in child_allel:
+            return child_allel, 'green'
+        else:
+            return child_allel, 'blue'
     current_generation = ember_data.copy()
+
     for gens in tqdm(range(num_gens), desc="simulating gens..."):
         new_gen = []
         for _ in range(len(current_generation) // 2):
@@ -70,15 +75,12 @@ def plot_one_simulaiton(simulation):
     plt.grid()
     plt.show()
 
-# simulation = simulating_population(ember_data, 10)
-# plot_one_simulaiton(simulation)
-
 
 # function to compare results over a number of futures
-def monte_carlo(ember_data, num_futures):
+def monte_carlo(ember_data, num_futures=10):
     distr = []
     for n in tqdm(range(num_futures), desc="simulating futures..."):
-        rand_sim = simulating_population(ember_data, 100)
+        rand_sim = simulating_generations(ember_data, 100)
         rand_sim = rand_sim.groupby(['generation', 'eye color']).size().unstack(fill_value=0)
 
         # proportions of each color
@@ -94,11 +96,7 @@ def monte_carlo(ember_data, num_futures):
     distr_df = pd.concat(distr)
     return distr_df
 
-
-mt_simulation = monte_carlo(ember_data,10)
-mt_simulation.to_excel('monte_carlo.xlsx')
-
-# function to plot all the runs (only works with small number of runs, becomes unreadable) 
+# function to plot all the runs (becomes unreadable if abused) 
 def plot_eye_color_proportions_all_runs(distr_df):
     colors = {"p_blue": "blue", "p_green": "green", "p_brown": "brown"}
 
@@ -110,9 +108,6 @@ def plot_eye_color_proportions_all_runs(distr_df):
     plt.ylabel("proportion of population")
     plt.title("Eye color proportions across runs")
     plt.show()
-
-
-plot_eye_color_proportions_all_runs(mt_simulation)
 
 
 
